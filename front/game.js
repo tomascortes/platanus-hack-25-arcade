@@ -25,7 +25,7 @@ function create() {
   const scene = this;
   
   // Title
-  this.add.text(400, 50, 'DICE GAME', {
+  this.add.text(400, 50, 'LIARS DICE GAME', {
     fontSize: '48px',
     fontFamily: 'Arial, sans-serif',
     color: '#ecf0f1',
@@ -41,7 +41,7 @@ function create() {
   createRollButton(scene);
 
   // Instructions
-  this.add.text(400, 550, 'Click "ROLL DICE" to roll again', {
+  this.add.text(400, 550, 'Click "ROLL DICE" to roll the dice', {
     fontSize: '18px',
     fontFamily: 'Arial, sans-serif',
     color: '#95a5a6',
@@ -118,33 +118,45 @@ function rollAllDice(scene) {
     die.setScale(1.15);
   });
   
-  // Step 2: Roll animation - rapidly change values
+  // Step 2: Roll animation - rapidly change values and rotate in steps
   let rollCount = 0;
   const maxRolls = 12;
   const rollInterval = 40; // milliseconds - faster for smoother effect
+  const rotationSteps = 5; // Number of discrete rotation steps
+  const totalRotation = 360 * 3; // Rotate 3 full turns during roll
+  const rotationPerStep = totalRotation / rotationSteps;
   
   const rollTimer = scene.time.addEvent({
     delay: rollInterval,
     callback: () => {
+      rollCount++;
+      
       // Update all dice with random values during roll
       dice.forEach((die) => {
         const randomValue = rollDice();
         updateDiceFace(die, randomValue);
+        
+        // Rotate in discrete steps (every few frames)
+        if (rollCount % Math.ceil(maxRolls / rotationSteps) === 0) {
+          const currentStep = Math.floor(rollCount / Math.ceil(maxRolls / rotationSteps));
+          const targetAngle = currentStep * rotationPerStep;
+          die.setAngle(targetAngle);
+        }
       });
       
-      rollCount++;
-      
+      // Check if we've reached the final roll
       if (rollCount >= maxRolls) {
         // Final roll - set actual random values and settle
         dice.forEach((die, index) => {
           const finalValue = rollDice();
           updateDiceFace(die, finalValue);
           
-          // Step 3: Scale back down with bounce
+          // Step 3: Scale back down with bounce and reset rotation
           scene.tweens.add({
             targets: die,
             scaleX: 1,
             scaleY: 1,
+            angle: 0, // Reset rotation to 0
             duration: 300,
             ease: 'Elastic.easeOut',
             onComplete: () => {
@@ -157,6 +169,7 @@ function rollAllDice(scene) {
         });
         
         rollTimer.remove();
+        return; // Exit early to prevent further execution
       }
     },
     repeat: maxRolls - 1

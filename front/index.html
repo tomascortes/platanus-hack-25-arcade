@@ -49,10 +49,10 @@
           fetch('/dice.js'),
           fetch('/game.js')
         ]);
-        
+
         if (!diceResponse.ok) throw new Error(`Failed to fetch dice.js: ${diceResponse.status}`);
         if (!gameResponse.ok) throw new Error(`Failed to fetch game.js: ${gameResponse.status}`);
-        
+
         const diceCode = await diceResponse.text();
         const gameCode = await gameResponse.text();
 
