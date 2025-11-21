@@ -1,7 +1,7 @@
 {
   "name": "platanus-hack-25-arcade",
   "version": "1.0.0",
-  "description": "Phaser arcade game challenge starter kit",
+  "description": "Phaser 3 game development starter kit",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,5 +14,8 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^7.1.12"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
   }
 }
