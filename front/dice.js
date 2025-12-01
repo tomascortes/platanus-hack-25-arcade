@@ -15,7 +15,14 @@ class Dice {
     this.value = Math.max(1, Math.min(6, Math.floor(initialValue)));
     this.angle = 0;
     this.lastRotationSound = 0;
-    this.velocity = 50
+    this.velocity = 50;
+    
+    // Roll animation configuration
+    this.maxRolls = 36; // 12 * 3
+    this.rollInterval = 40; // milliseconds
+    this.rotationSteps = 5; // Number of discrete rotation steps
+    this.totalRotation = 1080; // 360 * 3 degrees
+    this.rotationPerStep = this.totalRotation / this.rotationSteps;
     
     this.graphics = scene.add.graphics();
     this.graphics.setPosition(this.x, this.y);
@@ -277,7 +284,79 @@ class Dice {
     this.graphics.setScale(scale);
   }
 
-  moveRandom(rollCount, maxRolls) {
+  /**
+   * Start a roll animation - initializes roll state
+   */
+  startRoll() {
+    this.setScale(1.15);
+    // Movement direction will be initialized in moveRandom on first call
+    return true;
+  }
+
+  /**
+   * Calculate rotation angle for a given roll count
+   */
+  calculateRotationAngle(rollCount) {
+    const stepsPerRotation = Math.ceil(this.maxRolls / this.rotationSteps);
+    if (rollCount % stepsPerRotation === 0) {
+      const currentStep = Math.floor(rollCount / stepsPerRotation);
+      return currentStep * this.rotationPerStep;
+    }
+    return null; // No rotation change needed this step
+  }
+
+  /**
+   * Update dice for a single roll step
+   * Handles value randomization, rotation, and movement
+   */
+  updateRollStep(rollCount) {
+    // Randomize value during roll
+    const randomValue = Math.floor(Math.random() * 6) + 1;
+    this.setValue(randomValue);
+    
+    // Update rotation in discrete steps
+    const targetAngle = this.calculateRotationAngle(rollCount);
+    if (targetAngle !== null) {
+      this.setAngle(targetAngle);
+    }
+    
+    // Move dice during roll animation
+    this.moveRandom(rollCount);
+  }
+
+  /**
+   * Settle the dice back to initial position with animation
+   * @param {Function} onComplete - Optional callback when settle completes
+   */
+  settle(onComplete) {
+    const finalValue = Math.floor(Math.random() * 6) + 1;
+    this.setValue(finalValue);
+    
+    this.scene.tweens.add({
+      targets: this.graphics,
+      scaleX: 1,
+      scaleY: 1,
+      angle: 0,
+      x: this.initialX,
+      y: this.initialY,
+      duration: 300,
+      ease: 'Elastic.easeOut',
+      onUpdate: (tween) => {
+        this.angle = this.graphics.angle;
+        this.x = this.graphics.x;
+        this.y = this.graphics.y;
+      },
+      onComplete: () => {
+        this.setPosition(this.initialX, this.initialY);
+        this.setAngle(0);
+        if (onComplete) {
+          onComplete();
+        }
+      }
+    });
+  }
+
+  moveRandom(rollCount) {
     // 1. Initialize direction on first call (rollCount starts at 1 after increment)
     if (rollCount === 1) {
       const angle = Math.random() * 2 * Math.PI;
@@ -286,7 +365,7 @@ class Dice {
     }
     
     // 2. Determine phase: first half (random movement) or second half (return to origin)
-    const isSecondHalf = rollCount / maxRolls >= 0.5;
+    const isSecondHalf = rollCount / this.maxRolls >= 0.5;
     
     if (isSecondHalf) {
       // SECOND HALF: Move back toward initial position
@@ -294,8 +373,8 @@ class Dice {
       let targetY = this.y;
       
       // Calculate direction toward initial position
-      const deltaX = this.initialX - this.x + this.directionX*(1- rollCount/maxRolls);
-      const deltaY = this.initialY - this.y + this.directionY*(1 - rollCount/maxRolls);
+      const deltaX = this.initialX - this.x + this.directionX*(1- rollCount/this.maxRolls);
+      const deltaY = this.initialY - this.y + this.directionY*(1 - rollCount/this.maxRolls);
       
       // Move one step toward initial position
       if (Math.abs(deltaX) > 0) {

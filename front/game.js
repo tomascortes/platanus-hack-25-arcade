@@ -112,18 +112,17 @@ function rollAllDice(scene) {
   isRolling = true;
   playDiceClick(scene, 0.4); // Initial roll click
   
+  // Start roll for all dice
   dice.forEach((die) => {
-    die.setScale(1.15);
+    die.startRoll();
   });
   
-  // Step 2: Roll animation - rapidly change values and rotate in steps
-  let rollCount = 0;
-  const maxRolls = 12*3;
-  const rollInterval = 40; // milliseconds - faster for smoother effect
-  const rotationSteps = 5; // Number of discrete rotation steps
-  const totalRotation = 360 * 3; // Rotate 3 full turns during roll
-  const rotationPerStep = totalRotation / rotationSteps;
+  // Get roll configuration from first die (all dice share same config)
+  const maxRolls = dice[0].maxRolls;
+  const rollInterval = dice[0].rollInterval;
   
+  // Roll animation timer
+  let rollCount = 0;
   const rollTimer = scene.time.addEvent({
     delay: rollInterval,
     callback: () => {
@@ -134,51 +133,20 @@ function rollAllDice(scene) {
         playDiceClick(scene, 0.15 + Math.random() * 0.1); // Varied intensity clicks
       }
       
-      // Update all dice with random values during roll
+      // Update all dice for this roll step
       dice.forEach((die) => {
-        const randomValue = rollDice();
-        die.setValue(randomValue);
-        
-        // Rotate in discrete steps (every few frames)
-        if (rollCount % Math.ceil(maxRolls / rotationSteps) === 0) {
-          const currentStep = Math.floor(rollCount / Math.ceil(maxRolls / rotationSteps));
-          const targetAngle = currentStep * rotationPerStep;
-          die.setAngle(targetAngle);
-        }
-        
-        // Move dice during roll animation
-        die.moveRandom(rollCount, maxRolls);
+        die.updateRollStep(rollCount);
       });
       
       // Check if we've reached the final roll
       if (rollCount >= maxRolls) {
-        // Final roll - set actual random values and settle
+        // Final roll - settle all dice
         dice.forEach((die, index) => {
-          const finalValue = rollDice();
-          die.setValue(finalValue);
-          
-          // Step 3: Scale back down with bounce and reset rotation, return to initial position
-          scene.tweens.add({
-            targets: die.graphics,
-            scaleX: 1,
-            scaleY: 1,
-            angle: 0, // Reset rotation to 0
-            x: die.initialX,
-            y: die.initialY,
-            duration: 300,
-            ease: 'Elastic.easeOut',
-            onUpdate: (tween) => {
-              die.angle = die.graphics.angle;
-              die.x = die.graphics.x;
-              die.y = die.graphics.y;
-            },
-            onComplete: () => {
-              die.setPosition(die.initialX, die.initialY);
-              die.setAngle(0); // Ensure angle is reset
-              if (index === dice.length - 1) {
-                isRolling = false;
-                playDiceClick(scene, 0.25); // Final settle click
-              }
+          die.settle(() => {
+            // Last die to settle triggers completion
+            if (index === dice.length - 1) {
+              isRolling = false;
+              playDiceClick(scene, 0.25); // Final settle click
             }
           });
         });
