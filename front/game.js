@@ -23,6 +23,8 @@ let diceCount = 5;
 let diceCountText;
 const MIN_DICE = 1;
 const MAX_DICE = 10;
+let selectedValue = null; // Selected dice value for counting (1-6)
+let valueSelectorButtons = []; // Array of value selector button objects
 
 function create() {
   const scene = this;
@@ -33,6 +35,9 @@ function create() {
 
   // Create roll button
   createRollButton(scene);
+
+  // Create dice value selector
+  createValueSelector(scene);
 
   // Create dice controls
   createDiceControls(scene);
@@ -45,7 +50,7 @@ function initializeDice(scene) {
   dice = [];
 
   const startX = 400 - ((diceCount * diceSize + (diceCount - 1) * 20) / 2) + diceSize / 2;
-  const y = 300;
+  const y = 250; // Moved up from 300 to make room for buttons below
 
   for (let i = 0; i < diceCount; i++) {
     const centerX = startX + i * (diceSize + 20);
@@ -61,12 +66,12 @@ function createRollButton(scene) {
   // Create button background
   const buttonBg = scene.add.graphics();
   buttonBg.fillStyle(0x3498db, 1);
-  buttonBg.fillRoundedRect(300, 450, 200, 60, 10);
+  buttonBg.fillRoundedRect(300, 480, 200, 60, 10); // Moved down from 450
   buttonBg.lineStyle(3, 0x2980b9, 1);
-  buttonBg.strokeRoundedRect(300, 450, 200, 60, 10);
+  buttonBg.strokeRoundedRect(300, 480, 200, 60, 10);
 
   // Button text
-  const buttonText = scene.add.text(400, 480, 'ROLL DICE', {
+  const buttonText = scene.add.text(400, 510, 'ROLL DICE', { // Updated Y position
     fontSize: '28px',
     fontFamily: 'Arial, sans-serif',
     color: '#ffffff',
@@ -75,7 +80,7 @@ function createRollButton(scene) {
   }).setOrigin(0.5);
 
   // Make button interactive
-  buttonBg.setInteractive(new Phaser.Geom.Rectangle(300, 450, 200, 60), Phaser.Geom.Rectangle.Contains);
+  buttonBg.setInteractive(new Phaser.Geom.Rectangle(300, 480, 200, 60), Phaser.Geom.Rectangle.Contains);
   buttonBg.on('pointerdown', () => {
     if (!isRolling) {
       rollAllDice(scene);
@@ -84,23 +89,112 @@ function createRollButton(scene) {
   buttonBg.on('pointerover', () => {
     buttonBg.clear();
     buttonBg.fillStyle(0x5dade2, 1);
-    buttonBg.fillRoundedRect(300, 450, 200, 60, 10);
+    buttonBg.fillRoundedRect(300, 480, 200, 60, 10);
     buttonBg.lineStyle(3, 0x3498db, 1);
-    buttonBg.strokeRoundedRect(300, 450, 200, 60, 10);
+    buttonBg.strokeRoundedRect(300, 480, 200, 60, 10);
   });
   buttonBg.on('pointerout', () => {
     buttonBg.clear();
     buttonBg.fillStyle(0x3498db, 1);
-    buttonBg.fillRoundedRect(300, 450, 200, 60, 10);
+    buttonBg.fillRoundedRect(300, 480, 200, 60, 10);
     buttonBg.lineStyle(3, 0x2980b9, 1);
-    buttonBg.strokeRoundedRect(300, 450, 200, 60, 10);
+    buttonBg.strokeRoundedRect(300, 480, 200, 60, 10);
   });
 
   rollButton = { bg: buttonBg, text: buttonText };
 }
 
+function createValueSelector(scene) {
+  const y = 80;
+  const buttonSize = 45;
+  const spacing = 10;
+  const totalWidth = (buttonSize * 6) + (spacing * 5);
+  const startX = 400 - totalWidth / 2;
+
+  // Title text
+  scene.add.text(400, 40, 'Select Dice Value:', {
+    fontSize: '18px',
+    fontFamily: 'Arial, sans-serif',
+    color: '#ecf0f1',
+    align: 'center'
+  }).setOrigin(0.5);
+
+  // Create 6 buttons for each dice value
+  for (let value = 1; value <= 6; value++) {
+    const x = startX + (value - 1) * (buttonSize + spacing) + buttonSize / 2;
+
+    const bg = scene.add.graphics();
+    const text = scene.add.text(x, y, value.toString(), {
+      fontSize: '24px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    const drawButton = (isSelected) => {
+      bg.clear();
+      if (isSelected) {
+        bg.fillStyle(0x27ae60, 1); // Green when selected
+        bg.fillCircle(x, y, buttonSize / 2);
+        bg.lineStyle(3, 0x1e8449, 1);
+      } else {
+        bg.fillStyle(0x7f8c8d, 1); // Gray when not selected
+        bg.fillCircle(x, y, buttonSize / 2);
+        bg.lineStyle(2, 0xffffff, 0.5);
+      }
+      bg.strokeCircle(x, y, buttonSize / 2);
+    };
+
+    drawButton(false);
+
+    bg.setInteractive(
+      new Phaser.Geom.Circle(x, y, buttonSize / 2),
+      Phaser.Geom.Circle.Contains
+    );
+
+    bg.on('pointerdown', () => {
+      // Toggle selection - if already selected, deselect
+      if (selectedValue === value) {
+        selectedValue = null;
+        clearCountResults();
+        // Redraw all buttons to show none selected
+        valueSelectorButtons.forEach((btn) => {
+          btn.draw(false);
+        });
+      } else {
+        // Select new value
+        selectedValue = value;
+
+        // Redraw all buttons to reflect selection
+        valueSelectorButtons.forEach((btn, idx) => {
+          btn.draw(idx + 1 === selectedValue);
+        });
+
+        // Automatically perform count when selecting
+        performCount();
+      }
+    });
+
+    bg.on('pointerover', () => {
+      if (selectedValue !== value) {
+        bg.clear();
+        bg.fillStyle(0x95a5a6, 1);
+        bg.fillCircle(x, y, buttonSize / 2);
+        bg.lineStyle(2, 0xffffff, 0.5);
+        bg.strokeCircle(x, y, buttonSize / 2);
+      }
+    });
+
+    bg.on('pointerout', () => {
+      drawButton(selectedValue === value);
+    });
+
+    valueSelectorButtons.push({ bg, text, draw: drawButton, value });
+  }
+}
+
 function createDiceControls(scene) {
-  const y = 550;
+  const y = 565; // Moved down to avoid overlap with result text
   const spacing = 60;
   const centerX = 400;
 
@@ -163,10 +257,17 @@ function createControlButton(scene, x, y, label, callback) {
 function updateDiceCount(scene) {
   diceCountText.setText(`Dice: ${diceCount}`);
   initializeDice(scene);
+  // If a value is selected, re-perform count after dice re-initialization
+  if (selectedValue !== null) {
+    performCount();
+  }
 }
 
 function rollAllDice(scene) {
   if (isRolling) return;
+
+  // Clear count results and highlights when rolling
+  clearCountResults();
 
   isRolling = true;
   playDiceClick(scene, 0.4); // Initial roll click
@@ -206,6 +307,10 @@ function rollAllDice(scene) {
             if (index === dice.length - 1) {
               isRolling = false;
               playDiceClick(scene, 0.25); // Final settle click
+              // Automatically perform count if a value is selected
+              if (selectedValue !== null) {
+                performCount();
+              }
             }
           });
         });
@@ -252,4 +357,61 @@ function playDiceClick(scene, intensity = 0.3) {
 
   source.start(audioContext.currentTime);
   source.stop(audioContext.currentTime + 0.01);
+}
+
+/**
+ * Count dice by value following Liar's Dice rules
+ * 1s are wildcards and count toward any selected value
+ */
+function countDiceByValue(targetValue) {
+  let count = 0;
+  let matchingIndices = [];
+
+  dice.forEach((die, index) => {
+    // Liar's Dice rules: 1s are wildcards (comodines)
+    // BUT when counting 1s specifically, only count actual 1s
+    if (targetValue === 1) {
+      // When looking for 1s, only count 1s
+      if (die.value === 1) {
+        count++;
+        matchingIndices.push(index);
+      }
+    } else {
+      // When looking for other values, 1s count as wildcards
+      if (die.value === targetValue || die.value === 1) {
+        count++;
+        matchingIndices.push(index);
+      }
+    }
+  });
+
+  return { count, matchingIndices };
+}
+
+/**
+ * Perform the count operation and update UI
+ */
+function performCount() {
+  if (selectedValue === null) return;
+
+  const result = countDiceByValue(selectedValue);
+
+  // Highlight matching dice (no text display)
+  dice.forEach((die, index) => {
+    if (result.matchingIndices.includes(index)) {
+      die.setHighlight(true);
+    } else {
+      die.setHighlight(false);
+    }
+  });
+}
+
+/**
+ * Clear count results and remove highlights
+ */
+function clearCountResults() {
+  // Remove all highlights
+  dice.forEach(die => {
+    die.setHighlight(false);
+  });
 }

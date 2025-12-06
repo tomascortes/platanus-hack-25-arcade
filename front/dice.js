@@ -16,6 +16,7 @@ class Dice {
     this.angle = 0;
     this.lastRotationSound = 0;
     this.velocity = 50;
+    this.isHighlighted = false; // For visual feedback when counting
 
     // Roll animation configuration
     this.maxRolls = 36; // 12 * 3
@@ -189,7 +190,12 @@ class Dice {
     const borderWidth = 3;
     const cornerRadius = 4;
 
-    this.graphics.fillStyle(0xffffff, 1);
+    // Fill base color - green if highlighted, white otherwise
+    if (this.isHighlighted) {
+      this.graphics.fillStyle(0xd4edda, 1); // Light green background
+    } else {
+      this.graphics.fillStyle(0xffffff, 1);
+    }
     this.graphics.fillRoundedRect(x, y, this.size, this.size, cornerRadius);
 
     this.graphics.lineStyle(borderWidth, 0x000000, 0.4);
@@ -202,9 +208,15 @@ class Dice {
     this.graphics.lineTo(x + this.size, y + this.size - cornerRadius);
     this.graphics.strokePath();
 
-    this.graphics.lineStyle(borderWidth, 0x000000, 1);
+    // Border - green if highlighted, black otherwise
+    if (this.isHighlighted) {
+      this.graphics.lineStyle(4, 0x27ae60, 1); // Green border when highlighted
+    } else {
+      this.graphics.lineStyle(borderWidth, 0x000000, 1);
+    }
     this.graphics.strokeRoundedRect(x, y, this.size, this.size, cornerRadius);
 
+    // Light reflection effect
     this.graphics.fillStyle(0xffffff, 0.6);
     this.graphics.fillRoundedRect(x + 2, y + 2, this.size * 0.3, this.size * 0.3, 2);
   }
@@ -266,6 +278,14 @@ class Dice {
     if (angleChanged) {
       this.playRotationSound();
     }
+  }
+
+  /**
+   * Set highlight state for visual feedback
+   */
+  setHighlight(highlighted) {
+    this.isHighlighted = highlighted;
+    this.render();
   }
 
   /**
