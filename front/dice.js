@@ -53,7 +53,7 @@ class Dice {
   }
 
   /**
-     * Play rotation sound effect - randomly selects between tick, tack, and clank
+     * Play rotation sound effect - randomly selects between tick, tack
      */
   playRotationSound() {
     const now = Date.now();
@@ -63,12 +63,10 @@ class Dice {
     const audioContext = this.scene.sound.context;
     const rand = Math.random();
 
-    if (rand < 0.4) {
+    if (rand < 0.5) {
       this.playTickSound(audioContext);
-    } else if (rand < 0.75) {
-      this.playTackSound(audioContext);
     } else {
-      this.playClankSound(audioContext);
+      this.playTackSound(audioContext);
     }
   }
 
@@ -123,33 +121,35 @@ class Dice {
   }
 
   /**
-   * Play "clank" sound - wood clank, lowest pitch, longest, most resonant (40-80 Hz, 20-30ms)
+   * Play sound - wood hit, deep, like dice in wood
    */
-  playClankSound(audioContext) {
+  playWoodSound(audioContext) {
     const intensity = 0.15 + Math.random() * 0.1;
-    const duration = 0.02 + Math.random() * 0.01;
+    const duration = 0.03 + Math.random() * 0.02; // 30-50ms for deeper sound
     const bufferSize = Math.floor(audioContext.sampleRate * duration);
     const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
     const data = buffer.getChannelData(0);
 
-    const baseFreq = 40 + Math.random() * 40;
-    const noiseAmount = 0.1 + Math.random() * 0.2;
+    const baseFreq = 40 + Math.random() * 40; // 40-80 Hz for deep wood sound
+    const noiseAmount = 0.4 + Math.random() * 0.2; // More noise for wood texture
     const toneAmount = 1 - noiseAmount;
 
     for (let i = 0; i < bufferSize; i++) {
       const t = i / bufferSize;
-      const decay = Math.pow(1 - t, 1.5);
-
-      const fundamental = Math.sin(2 * Math.PI * baseFreq * t / audioContext.sampleRate * bufferSize);
-      const harmonic2 = Math.sin(2 * Math.PI * baseFreq * 2 * t / audioContext.sampleRate * bufferSize) * 0.3;
-      const harmonic3 = Math.sin(2 * Math.PI * baseFreq * 3 * t / audioContext.sampleRate * bufferSize) * 0.15;
-
-      const tone = (fundamental + harmonic2 + harmonic3) * toneAmount;
+      const decay = Math.pow(1 - t, 1.5); // Slower decay for wood resonance
+      const sineWave = Math.sin(2 * Math.PI * baseFreq * t / audioContext.sampleRate * bufferSize);
       const noise = (Math.random() * 2 - 1) * noiseAmount;
-      data[i] = (tone + noise) * decay * intensity;
+      data[i] = (sineWave * toneAmount + noise) * decay * intensity;
     }
 
     this.playAudioBuffer(audioContext, buffer, intensity, duration);
+  }
+
+  /**
+   * Play clank sound when dice hits wall
+   */
+  playClankSound(audioContext) {
+    this.playWoodSound(audioContext);
   }
 
   /**
@@ -414,10 +414,12 @@ class Dice {
       if (newX < 0 || newX > this.config.width) {
         this.directionX = -this.directionX;
         newX = this.x + this.directionX;
+        this.playClankSound(this.scene.sound.context);
       }
       if (newY < 0 || newY > this.config.height) {
         this.directionY = -this.directionY;
         newY = this.y + this.directionY;
+        this.playClankSound(this.scene.sound.context);
       }
 
       // Update position (both internal state and graphics)
